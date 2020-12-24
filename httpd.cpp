@@ -66,6 +66,8 @@ void controlCameraApp(char* cmd)
 
 void returntomain(char *msg)
 {
+    getmyIpAddr("wlan0");
+
     std::string address = "http://" + myipaddress + ":12345";
 	printf(
 		"<!DOCTYPE html>\n"\
@@ -96,22 +98,59 @@ void returntomain(char *msg)
 */
 }
 
+std::string ExecCmd(std::string command)
+{
+	char buffer[128];
+    std::string cmd_out = "";
+
+	// open pipe to file and execute command in linux terminal
+	FILE* pipe = popen(command.c_str(), "r");
+	if (!pipe)
+		return "popen failed!";
+
+	// read till end of process:
+	while (!feof(pipe)) 
+    {
+		// read output of the sent command and add to result
+		if (fgets(buffer, 128, pipe) != NULL)
+			cmd_out += buffer;
+	}
+	pclose(pipe);
+	// returns the output of terminal in string format
+	return cmd_out;
+}
+
+
 void run_app()
 {
     returntomain("Start CamaraController..");
-	system("./RaspCamControl.out &");
+
+	pid_t pid = fork();
+	if (pid == 0)
+	{
+        //system("./run_camera.sh &");
+        //system("./RaspCamControl.out");
+        //char* argv[] = { NULL , NULL };
+		//execl("./RaspCamControl.out &", NULL);
+		//exit(1);
+        //ExecCmd("nohup ./RaspCamControl.out &");
+        //ExecCmd("./RaspCamControl.out &");
+        ExecCmd("./run_camera.sh");
+	}
  }
 
 void kill_app()
 {
     returntomain("Try kill CamaraController..");
-	system("killall -9 ./RaspCamControl.out");
+	//system("killall -9 ./RaspCamControl.out");
+    ExecCmd("killall -9 ./RaspCamControl.out");
 }
 
-void getmyIpAddr(char *adapter, char* ip_buffer)
+void getmyIpAddr(char *adapter)
 {
 	int fd;
 	struct ifreq ifr;
+    char myaddr[20] = { 0, };
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	ifr.ifr_addr.sa_family = AF_INET;
@@ -120,7 +159,8 @@ void getmyIpAddr(char *adapter, char* ip_buffer)
 	ioctl(fd, SIOCGIFADDR, &ifr);
 	close(fd);
 
-	sprintf(ip_buffer, "%s", inet_ntoa(((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr));
+	sprintf(myaddr, "%s", inet_ntoa(((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr));
+    myipaddress = myaddr;
 }
 
 void serve_forever(const char *PORT)
@@ -131,10 +171,8 @@ void serve_forever(const char *PORT)
     
     int slot=0;
  
-    char myaddr[20] = { 0, };
     //getmyIpAddr("eth1", myaddr);
-    getmyIpAddr("wlan0", myaddr); 
-    myipaddress = myaddr;
+    getmyIpAddr("wlan0"); 
 
     //printf("Server started %shttp://127.0.0.1:%s%s\n", "\033[92m",PORT,"\033[0m" );
     printf("Server started %s:%s\n", myipaddress.c_str(), PORT);

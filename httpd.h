@@ -11,6 +11,7 @@ void run_app();
 void kill_app();
 
 void serve_forever(const char *PORT);
+void getmyIpAddr(char* adapter);
 
 // Client request
 
